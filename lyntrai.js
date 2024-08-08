@@ -16,7 +16,7 @@ getposts=()=> // get all posts that contain the command
 	fetch("https://lyntr.com/api/search?q="+command, {"credentials": "include"})
 	.then(x=>x.json()).then(x=>filterpost(x));
 
-time = 5e3; // do not change
+time = 11e3; // do not change
 
 function filterpost(x){ // filter posts w/ command
 	var z = 0; 
@@ -24,6 +24,7 @@ function filterpost(x){ // filter posts w/ command
 	x.forEach(y=>{
 		var c = y.id; // lynt id
 		if(y.content.startsWith(command) && y.commentCount == 0){ // if valid for replying
+			z+=time;
 			var prompt = y.content.replace(command, ''); // get prompt from lynt
 			fetch("https://yw85opafq6.execute-api.us-east-1.amazonaws.com/default/boss_mode_15aug?"+
 						"text="+personality+encodeURI(prompt)) // prompt ai
@@ -32,32 +33,32 @@ function filterpost(x){ // filter posts w/ command
 					console.log(y.username, '::', prompt, '->', aires); // log request
 					var f = () =>
 						setTimeout(
-							async ()=>{
+							()=>{
 								apipost( // send reply
 									'comment',
 									JSON.stringify({id: c, content: aires})
 								).then(x => {
-									if(x != 201) // check if fail
-										f();
+									console.log('sent to', y.username, 'with code', x);
 								});
-								console.log('sent');
 							}, z)
+					f()
 				});
-			z+=time;
 		}
 	});
 }
 async function apipost(x, y){ // api method
-	return fetch("https://lyntr.com/api/" + x, {
-		"body": y,
-		"method": "POST",
-		"credentials": "include"
-	}).then(e=>e.status);
+	return new Promise((z)=>{
+		fetch("https://lyntr.com/api/" + x, {
+			"body": y,
+			"method": "POST",
+			"credentials": "include"
+		}).catch(e=>{}).then(e=>z(e.status));
+	});
 }
 
 getposts(); // run bot
 var TO = setInterval( // loop bot
 	getposts,
-	time*5
+	time*2
 );
 end = () => clearInterval(TO); //stop loop
